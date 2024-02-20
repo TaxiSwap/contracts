@@ -160,4 +160,36 @@ contract WhiteBridgeMessengerTest is Test {
         vm.prank(nonOwner); // Simulate the call coming from the non-owner address
         whiteBridgeMessenger.withdrawTips();
     }
+
+    function testDepositAmountShouldBeLargerThanTip() public {
+        // Test for amount exactly equal to tip amount
+        uint256 equalTipAmount = whiteBridgeMessenger.tipAmount();
+        uint32 destinationDomain = 1;
+        bytes32 mintRecipient = bytes32(uint256(uint160(whaleTokenHolder)));
+        address burnToken = address(token);
+
+        vm.startPrank(whaleTokenHolder);
+
+        // Ensure the whale token holder approves the contract to spend the tokens
+        token.approve(address(whiteBridgeMessenger), equalTipAmount);
+        // Expect the contract to revert because the amount is not greater than the tip amount
+        vm.expectRevert("Amount must be greater than the tip amount");
+        // Attempt to make a deposit with an amount exactly equal to the tip amount
+        whiteBridgeMessenger.processToken(equalTipAmount, destinationDomain, mintRecipient, burnToken);
+
+        // Test for amount less than tip amount
+        uint256 lessThanTipAmount = whiteBridgeMessenger.tipAmount() - 1; // Less than tip amount by 1
+        // Ensure the whale token holder approves the contract to spend the lesser amount
+        token.approve(address(whiteBridgeMessenger), lessThanTipAmount);
+        // Expect the contract to revert again due to the amount being less than the tip amount
+        vm.expectRevert("Amount must be greater than the tip amount");
+        // Attempt to make a deposit with an amount less than the tip amount
+        whiteBridgeMessenger.processToken(lessThanTipAmount, destinationDomain, mintRecipient, burnToken);
+
+        // Deposit with an amount larger than the tip amount should succeed
+        token.approve(address(whiteBridgeMessenger), equalTipAmount+1);
+        whiteBridgeMessenger.processToken(equalTipAmount+1, destinationDomain, mintRecipient, burnToken);
+
+        vm.stopPrank();
+    }
 }
