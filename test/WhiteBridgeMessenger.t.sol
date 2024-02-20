@@ -140,4 +140,9 @@ contract WhiteBridgeMessengerTest is Test {
             "Owner should receive the exact amount of accumulated tips"
         );
     }
+
+    function testFailChangeTipAmountNonOwner() public {
+        vm.prank(address(0x2)); // An address that is not the owner
+        whiteBridgeMessenger.setTipAmount(30000); // This should fail
+    }
 }
