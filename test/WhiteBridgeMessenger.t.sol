@@ -150,4 +150,14 @@ contract WhiteBridgeMessengerTest is Test {
         vm.prank(address(0x2)); // An address that is not the owner
         whiteBridgeMessenger.transferOwnership(address(0x3)); // This should fail
     }
+
+    function testFailWithdrawTipsNonOwner() public {
+        // Setup a new address that is not the owner
+        address nonOwner = address(0xdead);
+
+        // Attempt to withdraw tips as a non-owner
+        vm.expectRevert("Ownable: caller is not the owner"); // Adjust the revert message based on your contract's implementation
+        vm.prank(nonOwner); // Simulate the call coming from the non-owner address
+        whiteBridgeMessenger.withdrawTips();
+    }
 }
