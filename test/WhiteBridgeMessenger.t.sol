@@ -145,4 +145,9 @@ contract WhiteBridgeMessengerTest is Test {
         vm.prank(address(0x2)); // An address that is not the owner
         whiteBridgeMessenger.setTipAmount(30000); // This should fail
     }
+
+    function testFailChangeOwnerNonOwner() public {
+        vm.prank(address(0x2)); // An address that is not the owner
+        whiteBridgeMessenger.transferOwnership(address(0x3)); // This should fail
+    }
 }
