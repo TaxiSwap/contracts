@@ -94,4 +94,50 @@ contract WhiteBridgeMessengerTest is Test {
         whiteBridgeMessenger.transferOwnership(newOwner);
         assertEq(whiteBridgeMessenger.owner(), newOwner, "Ownership did not transfer correctly");
     }
+
+    function testWithdrawTipsWithDeposits() public {
+        // Assume initial setup has been done in setUp()
+
+        // Simulate a couple of deposits to accumulate tips
+        uint256 depositAmount1 = 1000e6; // First deposit amount with 6 decimals
+        uint256 depositAmount2 = 2000e6; // Second deposit amount with 6 decimals
+        uint32 destinationDomain = 1;
+        bytes32 mintRecipient = bytes32(uint256(uint160(whaleTokenHolder)));
+        address burnToken = address(token);
+
+        // Make sure the whale token holder approves the contract to spend tokens
+        vm.prank(whaleTokenHolder);
+        token.approve(address(whiteBridgeMessenger), depositAmount1 + depositAmount2);
+
+        // Process first deposit
+        vm.prank(whaleTokenHolder);
+        whiteBridgeMessenger.processToken(depositAmount1, destinationDomain, mintRecipient, burnToken);
+
+        // Process second deposit
+        vm.prank(whaleTokenHolder);
+        whiteBridgeMessenger.processToken(depositAmount2, destinationDomain, mintRecipient, burnToken);
+
+        // Calculate expected tips accumulated
+        uint256 expectedTips = whiteBridgeMessenger.tipAmount() * 2; // Since two deposits were made
+
+        // Check balances before withdrawal
+        uint256 ownerBalanceBefore = token.balanceOf(address(this));
+        uint256 contractBalanceBefore = token.balanceOf(address(whiteBridgeMessenger));
+        assertEq(contractBalanceBefore, expectedTips, "Contract should have exactly the accumulated tips");
+
+        // Withdraw tips
+        whiteBridgeMessenger.withdrawTips();
+
+        // Check balances after withdrawal
+        uint256 ownerBalanceAfter = token.balanceOf(address(this));
+        uint256 contractBalanceAfter = token.balanceOf(address(whiteBridgeMessenger));
+
+        // Assertions
+        assertEq(contractBalanceAfter, 0, "Contract should have 0 balance after tips withdrawal");
+        assertEq(
+            ownerBalanceAfter - ownerBalanceBefore,
+            expectedTips,
+            "Owner should receive the exact amount of accumulated tips"
+        );
+    }
 }
