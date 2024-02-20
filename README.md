@@ -23,8 +23,16 @@ $ forge build
 
 ### Test
 
+Copy the `.env` example and fill it with your data:
 ```shell
-$ forge test
+cp .env.example .env
+```
+Activate you environment variables, run a network fork with anvil and run the tests:
+
+```shell
+$ source .env
+$ anvil --fork-url $RPC_URL --fork-block-number $FORK_BLOCK_NUMBER
+$ forge test --fork-url=http://localhost:8545
 ```
 
 ### Format
