@@ -6,20 +6,35 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ITokenMessenger.sol";
 import "./interfaces/IWhiteBridgeMessenger.sol";
 
+/// @title A bridge messenger contract for transferring tokens with a tip mechanism
+/// @dev This contract allows tokens to be sent across domains with an additional tip fee deducted from the transfer amount.
+/// @notice This contract should be used with a corresponding CCTP token messenger and USDC token
 contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger {
     IERC20 public token;
     ITokenMessenger public tokenMessenger;
     uint256 public tipAmount = 10_000; // Tip amount of 0.01 for a token with 6 decimals
 
+    /// @dev Sets up the WhiteBridgeMessenger with necessary addresses and defaults
+    /// @param _token The address of the USDC token contract to be used for transfers and tips
+    /// @param _tokenMessenger The address of the CCTP contract that handles the cross-domain token transfer
     constructor(address _token, address _tokenMessenger) Ownable(msg.sender) {
         token = IERC20(_token);
         tokenMessenger = ITokenMessenger(_tokenMessenger);
     }
 
+    /// @notice Sets the tip amount required for processing the token transfer
+    /// @dev This function can only be called by the owner of the contract.
+    /// @param _tipAmount The new tip amount in tokens
     function setTipAmount(uint256 _tipAmount) external onlyOwner {
         tipAmount = _tipAmount;
     }
 
+    /// @notice Processes a token transfer across domains with a tip deducted
+    /// @dev Transfers the tip amount to the contract treasury and the remaining amount to the tokenMessenger for further processing.
+    /// @param _amount The total amount of tokens to be transferred, including the tip
+    /// @param _destinationDomain The domain where the tokens will be minted
+    /// @param _mintRecipient The address on the destination domain to receive the minted tokens
+    /// @param _burnToken The address of the token to burn on the source domain
     function processToken(uint256 _amount, uint32 _destinationDomain, bytes32 _mintRecipient, address _burnToken)
         external
     {
@@ -44,6 +59,8 @@ contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger {
         emit DepositForBurnCalled(nonce, remainingAmount, _destinationDomain, _mintRecipient, _burnToken);
     }
 
+    /// @notice Allows the owner to withdraw accumulated tip amounts
+    /// @dev Withdraws all the tokens held by the contract to the owner's address.
     function withdrawTips() external onlyOwner {
         uint256 balance = token.balanceOf(address(this));
         require(token.transfer(owner(), balance), "Withdrawal failed");
