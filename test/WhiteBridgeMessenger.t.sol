@@ -82,4 +82,10 @@ contract WhiteBridgeMessengerTest is Test {
             "Incorrect contract balance after transfers"
         );
     }
+
+    function testChangeTipAmount() public {
+        uint256 newTipAmount = 20000; // Example new tip amount
+        whiteBridgeMessenger.setTipAmount(newTipAmount);
+        assertEq(whiteBridgeMessenger.tipAmount(), newTipAmount, "Tip amount did not update correctly");
+    }
 }
