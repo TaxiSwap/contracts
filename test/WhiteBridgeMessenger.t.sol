@@ -88,4 +88,10 @@ contract WhiteBridgeMessengerTest is Test {
         whiteBridgeMessenger.setTipAmount(newTipAmount);
         assertEq(whiteBridgeMessenger.tipAmount(), newTipAmount, "Tip amount did not update correctly");
     }
+
+    function testChangeOwner() public {
+        address newOwner = address(0x01);
+        whiteBridgeMessenger.transferOwnership(newOwner);
+        assertEq(whiteBridgeMessenger.owner(), newOwner, "Ownership did not transfer correctly");
+    }
 }
