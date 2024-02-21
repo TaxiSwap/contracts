@@ -12,7 +12,8 @@ import "./interfaces/IWhiteBridgeMessenger.sol";
 contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger {
     IERC20 public token;
     ITokenMessenger public tokenMessenger;
-    uint256 public tipAmount = 10_000; // Tip amount of 0.01 for a token with 6 decimals
+    mapping(uint32 => uint256) private tipAmountsByDomain;
+    uint256 public defaultTipAmount = 10_000; // Default tip amount
 
     /// @dev Sets up the WhiteBridgeMessenger with necessary addresses and defaults
     /// @param _token The address of the USDC token contract to be used for transfers and tips
@@ -22,11 +23,23 @@ contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger {
         tokenMessenger = ITokenMessenger(_tokenMessenger);
     }
 
-    /// @notice Sets the tip amount required for processing the token transfer
+    /// @notice Sets the default tip amount required for processing the token transfer
     /// @dev This function can only be called by the owner of the contract.
-    /// @param _tipAmount The new tip amount in tokens
-    function setTipAmount(uint256 _tipAmount) external onlyOwner {
-        tipAmount = _tipAmount;
+    /// @param _defaultTipAmount The new tip amount in tokens
+    function setDefaultTipAmount(uint256 _defaultTipAmount) external onlyOwner {
+        defaultTipAmount = _defaultTipAmount;
+    }
+
+    /// @notice Sets the tip amount required for processing the token transfer for a specific domain
+    /// @dev This function can only be called by the owner of the contract.
+    /// @param _domain The domain for which the tip amount is being set
+    /// @param _tipAmount The new tip amount in tokens for the specified domain
+    function setTipAmountForDomain(uint32 _domain, uint256 _tipAmount) external onlyOwner {
+        tipAmountsByDomain[_domain] = _tipAmount;
+    }
+
+    function getTipAmount(uint32 _destinationDomain) external view returns (uint256){
+        return tipAmountsByDomain[_destinationDomain] > 0 ? tipAmountsByDomain[_destinationDomain] : defaultTipAmount;
     }
 
     /// @notice Processes a token transfer across domains with a tip deducted
@@ -38,6 +51,9 @@ contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger {
     function processToken(uint256 _amount, uint32 _destinationDomain, bytes32 _mintRecipient, address _burnToken)
         external
     {
+        uint256 tipAmount =
+            tipAmountsByDomain[_destinationDomain] > 0 ? tipAmountsByDomain[_destinationDomain] : defaultTipAmount;
+
         require(_amount > tipAmount, "Amount must be greater than the tip amount");
 
         // Transfer the tip amount to this contract's treasury

@@ -46,7 +46,7 @@ contract WhiteBridgeMessengerTest is Test {
         uint256 initialWhaleBalance = token.balanceOf(whaleTokenHolder);
         uint256 initialContractBalance = token.balanceOf(address(whiteBridgeMessenger));
 
-        uint256 actualRecievedAmount = amount - whiteBridgeMessenger.tipAmount();
+        uint256 actualRecievedAmount = amount - whiteBridgeMessenger.getTipAmount(destinationDomain);
 
         // Expected parameters for the DepositForBurn event
         bytes32 destinationTokenMessenger = 0x0; // Dummy placeholder as it will be unckecked
@@ -78,15 +78,68 @@ contract WhiteBridgeMessengerTest is Test {
         assertEq(initialWhaleBalance - finalWhaleBalance, amount, "Incorrect whale balance after transfers");
         assertEq(
             finalContractBalance - initialContractBalance,
-            whiteBridgeMessenger.tipAmount(),
+            whiteBridgeMessenger.getTipAmount(destinationDomain),
             "Incorrect contract balance after transfers"
         );
     }
 
-    function testChangeTipAmount() public {
+    function testProcessTokenWithVariableTips() public {
+        uint256 domain1TipAmount = 5000; // Tip amount for domain 1
+        uint256 domain2TipAmount = 15000; // Tip amount for domain 2
+        whiteBridgeMessenger.setTipAmountForDomain(1, domain1TipAmount);
+        whiteBridgeMessenger.setTipAmountForDomain(2, domain2TipAmount);
+
+        // Process a token transfer for domain 1 and verify the tip amount is correctly used
+        uint256 amountForDomain1 = 10000e6; // 10 USDC with 6 decimals, for example
+        uint32 destinationDomain1 = 1;
+        bytes32 mintRecipient1 = bytes32(uint256(uint160(whaleTokenHolder)));
+        address burnToken1 = address(token);
+
+        // Domain 1 tip
+        vm.prank(whaleTokenHolder);
+        whiteBridgeMessenger.processToken(amountForDomain1, destinationDomain1, mintRecipient1, burnToken1);
+
+        uint256 whiteBridgeMessengerBalance1 = token.balanceOf(address(whiteBridgeMessenger));
+        assertEq(whiteBridgeMessengerBalance1, domain1TipAmount, "Not correct tip amount 1 transfered");
+
+        // Process a token transfer for domain 2 and verify the tip amount is correctly used
+        uint256 amountForDomain2 = 1000e6; // 1 USDC with 6 decimals, for example
+        uint32 destinationDomain2 = 2;
+        bytes32 mintRecipient2 = bytes32(uint256(uint160(whaleTokenHolder)));
+        address burnToken2 = address(token);
+
+        // Domain 2 tip
+        vm.prank(whaleTokenHolder);
+        whiteBridgeMessenger.processToken(amountForDomain2, destinationDomain2, mintRecipient2, burnToken2);
+
+        uint256 whiteBridgeMessengerBalance2 = token.balanceOf(address(whiteBridgeMessenger));
+        assertEq(
+            whiteBridgeMessengerBalance2,
+            whiteBridgeMessengerBalance1 + domain2TipAmount,
+            "Not correct tip amount 2 transfered"
+        );
+    }
+
+    function testProcessTokenWhenAmountLessThanOrEqualToTipForDomainShouldFail() public {
+        uint32 testDomain = 1;
+        uint256 testTipAmount = 5000;
+        whiteBridgeMessenger.setTipAmountForDomain(testDomain, testTipAmount);
+
+        uint256 insufficientAmount = testTipAmount; // This should trigger failure
+        bytes32 mintRecipient = bytes32(uint256(uint160(whaleTokenHolder)));
+        address burnToken = address(token);
+
+        vm.startPrank(whaleTokenHolder);
+        token.approve(address(whiteBridgeMessenger), insufficientAmount);
+        vm.expectRevert("Amount must be greater than the tip amount");
+        whiteBridgeMessenger.processToken(insufficientAmount, testDomain, mintRecipient, burnToken);
+        vm.stopPrank();
+    }
+
+    function testChangedDefaultTipAmount() public {
         uint256 newTipAmount = 20000; // Example new tip amount
-        whiteBridgeMessenger.setTipAmount(newTipAmount);
-        assertEq(whiteBridgeMessenger.tipAmount(), newTipAmount, "Tip amount did not update correctly");
+        whiteBridgeMessenger.setDefaultTipAmount(newTipAmount);
+        assertEq(whiteBridgeMessenger.defaultTipAmount(), newTipAmount, "Tip amount did not update correctly");
     }
 
     function testChangeOwner() public {
@@ -118,7 +171,7 @@ contract WhiteBridgeMessengerTest is Test {
         whiteBridgeMessenger.processToken(depositAmount2, destinationDomain, mintRecipient, burnToken);
 
         // Calculate expected tips accumulated
-        uint256 expectedTips = whiteBridgeMessenger.tipAmount() * 2; // Since two deposits were made
+        uint256 expectedTips = whiteBridgeMessenger.defaultTipAmount() * 2; // Since two deposits were made
 
         // Check balances before withdrawal
         uint256 ownerBalanceBefore = token.balanceOf(address(this));
@@ -143,7 +196,7 @@ contract WhiteBridgeMessengerTest is Test {
 
     function testFailChangeTipAmountNonOwner() public {
         vm.prank(address(0x2)); // An address that is not the owner
-        whiteBridgeMessenger.setTipAmount(30000); // This should fail
+        whiteBridgeMessenger.setDefaultTipAmount(30000); // This should fail
     }
 
     function testFailChangeOwnerNonOwner() public {
@@ -163,7 +216,7 @@ contract WhiteBridgeMessengerTest is Test {
 
     function testDepositAmountShouldBeLargerThanTip() public {
         // Test for amount exactly equal to tip amount
-        uint256 equalTipAmount = whiteBridgeMessenger.tipAmount();
+        uint256 equalTipAmount = whiteBridgeMessenger.defaultTipAmount();
         uint32 destinationDomain = 1;
         bytes32 mintRecipient = bytes32(uint256(uint160(whaleTokenHolder)));
         address burnToken = address(token);
@@ -178,7 +231,7 @@ contract WhiteBridgeMessengerTest is Test {
         whiteBridgeMessenger.processToken(equalTipAmount, destinationDomain, mintRecipient, burnToken);
 
         // Test for amount less than tip amount
-        uint256 lessThanTipAmount = whiteBridgeMessenger.tipAmount() - 1; // Less than tip amount by 1
+        uint256 lessThanTipAmount = whiteBridgeMessenger.defaultTipAmount() - 1; // Less than tip amount by 1
         // Ensure the whale token holder approves the contract to spend the lesser amount
         token.approve(address(whiteBridgeMessenger), lessThanTipAmount);
         // Expect the contract to revert again due to the amount being less than the tip amount
@@ -187,8 +240,8 @@ contract WhiteBridgeMessengerTest is Test {
         whiteBridgeMessenger.processToken(lessThanTipAmount, destinationDomain, mintRecipient, burnToken);
 
         // Deposit with an amount larger than the tip amount should succeed
-        token.approve(address(whiteBridgeMessenger), equalTipAmount+1);
-        whiteBridgeMessenger.processToken(equalTipAmount+1, destinationDomain, mintRecipient, burnToken);
+        token.approve(address(whiteBridgeMessenger), equalTipAmount + 1);
+        whiteBridgeMessenger.processToken(equalTipAmount + 1, destinationDomain, mintRecipient, burnToken);
 
         vm.stopPrank();
     }
