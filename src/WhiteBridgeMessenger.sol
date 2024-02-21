@@ -18,7 +18,7 @@ contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger {
     /// @dev Sets up the WhiteBridgeMessenger with necessary addresses and defaults
     /// @param _token The address of the USDC token contract to be used for transfers and tips
     /// @param _tokenMessenger The address of the CCTP contract that handles the cross-domain token transfer
-    constructor(address _token, address _tokenMessenger) Ownable(msg.sender) {
+    constructor(address _token, address _tokenMessenger, address _owner) Ownable(_owner) {
         token = IERC20(_token);
         tokenMessenger = ITokenMessenger(_tokenMessenger);
     }

@@ -14,6 +14,7 @@ contract WhiteBridgeMessengerTest is Test {
     address public whaleTokenHolder;
     address public tokenMessenger;
     uint256 public initialBalance = 100000e6; // 1000 USDC with 6  decimals
+    address public owner = address(0xCAFEBABE);
 
     // Event declaration
     event DepositForBurnCalled(
@@ -31,7 +32,7 @@ contract WhiteBridgeMessengerTest is Test {
         tokenMessenger = address(bytes20(vm.envBytes("TOKEN_MESSENGER_ADDRESS")));
         whaleTokenHolder = vm.envAddress("WHALE_TOKEN_HOLDER");
 
-        whiteBridgeMessenger = new WhiteBridgeMessenger(address(token), tokenMessenger);
+        whiteBridgeMessenger = new WhiteBridgeMessenger(address(token), tokenMessenger, owner);
 
         vm.prank(whaleTokenHolder);
         token.approve(address(whiteBridgeMessenger), initialBalance);
@@ -86,8 +87,10 @@ contract WhiteBridgeMessengerTest is Test {
     function testProcessTokenWithVariableTips() public {
         uint256 domain1TipAmount = 5000; // Tip amount for domain 1
         uint256 domain2TipAmount = 15000; // Tip amount for domain 2
+        vm.startPrank(owner);
         whiteBridgeMessenger.setTipAmountForDomain(1, domain1TipAmount);
         whiteBridgeMessenger.setTipAmountForDomain(2, domain2TipAmount);
+        vm.stopPrank();
 
         // Process a token transfer for domain 1 and verify the tip amount is correctly used
         uint256 amountForDomain1 = 10000e6; // 10 USDC with 6 decimals, for example
@@ -123,6 +126,7 @@ contract WhiteBridgeMessengerTest is Test {
     function testProcessTokenWhenAmountLessThanOrEqualToTipForDomainShouldFail() public {
         uint32 testDomain = 1;
         uint256 testTipAmount = 5000;
+        vm.prank(owner);
         whiteBridgeMessenger.setTipAmountForDomain(testDomain, testTipAmount);
 
         uint256 insufficientAmount = testTipAmount; // This should trigger failure
@@ -138,12 +142,14 @@ contract WhiteBridgeMessengerTest is Test {
 
     function testChangedDefaultTipAmount() public {
         uint256 newTipAmount = 20000; // Example new tip amount
+        vm.prank(owner);
         whiteBridgeMessenger.setDefaultTipAmount(newTipAmount);
         assertEq(whiteBridgeMessenger.defaultTipAmount(), newTipAmount, "Tip amount did not update correctly");
     }
 
     function testChangeOwner() public {
         address newOwner = address(0x01);
+        vm.prank(owner);
         whiteBridgeMessenger.transferOwnership(newOwner);
         assertEq(whiteBridgeMessenger.owner(), newOwner, "Ownership did not transfer correctly");
     }
@@ -174,15 +180,16 @@ contract WhiteBridgeMessengerTest is Test {
         uint256 expectedTips = whiteBridgeMessenger.defaultTipAmount() * 2; // Since two deposits were made
 
         // Check balances before withdrawal
-        uint256 ownerBalanceBefore = token.balanceOf(address(this));
+        uint256 ownerBalanceBefore = token.balanceOf(owner);
         uint256 contractBalanceBefore = token.balanceOf(address(whiteBridgeMessenger));
         assertEq(contractBalanceBefore, expectedTips, "Contract should have exactly the accumulated tips");
 
         // Withdraw tips
+        vm.prank(owner);
         whiteBridgeMessenger.withdrawTips();
 
         // Check balances after withdrawal
-        uint256 ownerBalanceAfter = token.balanceOf(address(this));
+        uint256 ownerBalanceAfter = token.balanceOf(owner);
         uint256 contractBalanceAfter = token.balanceOf(address(whiteBridgeMessenger));
 
         // Assertions
