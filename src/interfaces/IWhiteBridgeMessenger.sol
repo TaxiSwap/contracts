@@ -35,7 +35,7 @@ interface IWhiteBridgeMessenger {
     /// @param _destinationDomain The domain where the tokens will be minted
     /// @param _mintRecipient The address on the destination domain to receive the minted tokens
     /// @param _burnToken The address of the token to burn on the source domain
-    function processToken(uint256 _amount, uint32 _destinationDomain, bytes32 _mintRecipient, address _burnToken)
+    function sendMessage(uint256 _amount, uint32 _destinationDomain, bytes32 _mintRecipient, address _burnToken)
         external;
 
     function withdrawTips() external;
