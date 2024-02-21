@@ -38,7 +38,7 @@ contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger {
         tipAmountsByDomain[_domain] = _tipAmount;
     }
 
-    function getTipAmount(uint32 _destinationDomain) external view returns (uint256){
+    function getTipAmount(uint32 _destinationDomain) external view returns (uint256) {
         return tipAmountsByDomain[_destinationDomain] > 0 ? tipAmountsByDomain[_destinationDomain] : defaultTipAmount;
     }
 
