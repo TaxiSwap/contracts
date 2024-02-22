@@ -55,8 +55,16 @@ $ anvil
 
 ### Deploy
 
+Set the RPC_URL,ETHERSCAN_API_KEY, VERIFIER_URL, PRIVATE_KEY, TOKEN_ADDRESS, OWNER and TOKEN_MESSENGER_ADDRESS  environment variables before running it.
+
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+$ source .env
+```
+
+```shell
+$ forge script script/deploy.s.sol:DeployWhiteBridgeMessenger \
+--rpc-url $RPC_URL --etherscan-api-key $ETHERSCAN_API_KEY \
+--broadcast --verify -vvvv
 ```
 
 ### Cast
