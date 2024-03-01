@@ -16,6 +16,7 @@ import "../src/WhiteBridgeMessenger.sol";
 ///      --broadcast --verify -vvvv
 /// It requires the RPC_URL,ETHERSCAN_API_KEY, VERIFIER_URL, PRIVATE_KEY, TOKEN_ADDRESS, OWNER and TOKEN_MESSENGER_ADDRESS  to be set as environment variables.
 contract DeployWhiteBridgeMessenger is Script {
+    uint32[] initialAllowedDomains = [0, 1, 2, 3, 6, 7];
     /// @notice Main function that executes the deployment process
     /// @dev This function reads the private key from environment variables,
     ///      as also the token and token messenger addresses
@@ -34,7 +35,7 @@ contract DeployWhiteBridgeMessenger is Script {
         // Starting the broadcast transaction process with the provided private key
         vm.startBroadcast(privateKey);
         // Deploying the WhiteBridgeMessenger contract with specified deployment salt
-        new WhiteBridgeMessenger{salt: versionSalt}(token, tokenMessenger, owner);
+        new WhiteBridgeMessenger{salt: versionSalt}(token, tokenMessenger, owner, initialAllowedDomains);
 
         // Stopping the broadcast process
         vm.stopBroadcast();
