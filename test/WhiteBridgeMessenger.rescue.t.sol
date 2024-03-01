@@ -16,6 +16,7 @@ contract WhiteBridgeMessengerTest is Test {
     address public tokenMessenger;
     uint256 public initialBalance = 100000e6; // 1000 USDC with 6  decimals
     address public owner = address(0xCAFEBABE);
+    uint32[] initialAllowedDomains = [0, 1, 2, 3, 6, 7];
 
     error OwnableUnauthorizedAccount(address account);
 
@@ -26,7 +27,7 @@ contract WhiteBridgeMessengerTest is Test {
         tokenMessenger = address(bytes20(vm.envBytes("TOKEN_MESSENGER_ADDRESS")));
         whaleTokenHolder = vm.envAddress("WHALE_TOKEN_HOLDER");
 
-        whiteBridgeMessenger = new WhiteBridgeMessenger(address(token), tokenMessenger, owner);
+        whiteBridgeMessenger = new WhiteBridgeMessenger(address(token), tokenMessenger, owner, initialAllowedDomains);
 
         vm.prank(whaleTokenHolder);
         token.approve(address(whiteBridgeMessenger), initialBalance);
