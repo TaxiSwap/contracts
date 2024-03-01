@@ -15,6 +15,7 @@ contract WhiteBridgeMessengerTest is Test {
     address public tokenMessenger;
     uint256 public initialBalance = 100000e6; // 1000 USDC with 6  decimals
     address public owner = address(0xCAFEBABE);
+    uint32[] initialAllowedDomains = [0, 1, 2, 3, 6, 7];
 
     // Event declaration
     event DepositForBurnCalled(
@@ -32,7 +33,7 @@ contract WhiteBridgeMessengerTest is Test {
         tokenMessenger = address(bytes20(vm.envBytes("TOKEN_MESSENGER_ADDRESS")));
         whaleTokenHolder = vm.envAddress("WHALE_TOKEN_HOLDER");
 
-        whiteBridgeMessenger = new WhiteBridgeMessenger(address(token), tokenMessenger, owner);
+        whiteBridgeMessenger = new WhiteBridgeMessenger(address(token), tokenMessenger, owner, initialAllowedDomains);
 
         vm.prank(whaleTokenHolder);
         token.approve(address(whiteBridgeMessenger), initialBalance);
@@ -138,6 +139,20 @@ contract WhiteBridgeMessengerTest is Test {
         vm.expectRevert("Amount must be greater than the tip amount");
         whiteBridgeMessenger.sendMessage(insufficientAmount, testDomain, mintRecipient, burnToken);
         vm.stopPrank();
+    }
+
+    function testSendMessageNotAllowedDomain() public {
+        uint256 amount = 1000e6; // Assuming 6 decimals
+        uint32 destinationDomain = 15; // A domain not in the allowed list
+        bytes32 mintRecipient = bytes32(uint256(uint160(whaleTokenHolder)));
+        address burnToken = address(token);
+
+        // Expect the transaction to revert due to the domain not being allowed
+        vm.expectRevert("Destination domain not allowed");
+        vm.prank(whaleTokenHolder);
+        whiteBridgeMessenger.sendMessage(amount, destinationDomain, mintRecipient, burnToken);
+
+        // Since the transaction is expected to revert, there's no need to check post-conditions
     }
 
     function testChangedDefaultTipAmount() public {
@@ -252,5 +267,49 @@ contract WhiteBridgeMessengerTest is Test {
         whiteBridgeMessenger.sendMessage(equalTipAmount + 1, destinationDomain, mintRecipient, burnToken);
 
         vm.stopPrank();
+    }
+
+    function testAllowDomain() public {
+        uint32 testDomain = 8;
+        vm.prank(owner);
+        whiteBridgeMessenger.allowDomain(testDomain);
+
+        bool isAllowed = whiteBridgeMessenger.allowedDomains(testDomain);
+        assertTrue(isAllowed, "Domain should be allowed.");
+    }
+
+    function testDisallowDomain() public {
+        uint32 testDomain = 8;
+        // First, allow the domain to then disallow it
+        vm.prank(owner);
+        whiteBridgeMessenger.allowDomain(testDomain);
+
+        vm.prank(owner);
+        whiteBridgeMessenger.disallowDomain(testDomain);
+
+        bool isAllowed = whiteBridgeMessenger.allowedDomains(testDomain);
+        assertFalse(isAllowed, "Domain should be disallowed.");
+    }
+
+    function testNonOwnerCannotAllowDomain() public {
+        uint32 testDomain = 8;
+        address nonOwner = address(0xdeadbeef);
+        vm.prank(nonOwner);
+        bytes4 selector = bytes4(keccak256("OwnableUnauthorizedAccount(address)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner)));
+        whiteBridgeMessenger.allowDomain(testDomain);
+    }
+
+    function testNonOwnerCannotDisallowDomain() public {
+        uint32 testDomain = 8;
+        address nonOwner = address(0xdeadbeef);
+        // Assume domain is already allowed for this test
+        vm.prank(owner);
+        whiteBridgeMessenger.allowDomain(testDomain);
+
+        vm.prank(nonOwner);
+        bytes4 selector = bytes4(keccak256("OwnableUnauthorizedAccount(address)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner)));
+        whiteBridgeMessenger.disallowDomain(testDomain);
     }
 }
