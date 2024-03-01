@@ -15,13 +15,31 @@ contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger, RescueContract 
     ITokenMessenger public tokenMessenger;
     mapping(uint32 => uint256) private tipAmountsByDomain;
     uint256 public defaultTipAmount = 10_000; // Default tip amount
+    mapping(uint32 => bool) public allowedDomains;
 
     /// @dev Sets up the WhiteBridgeMessenger with necessary addresses and defaults
     /// @param _token The address of the USDC token contract to be used for transfers and tips
     /// @param _tokenMessenger The address of the CCTP contract that handles the cross-domain token transfer
-    constructor(address _token, address _tokenMessenger, address _owner) Ownable(_owner) {
+    constructor(address _token, address _tokenMessenger, address _owner, uint32[] memory _allowedDomains)
+        Ownable(_owner)
+    {
         token = IERC20(_token);
         tokenMessenger = ITokenMessenger(_tokenMessenger);
+        for (uint256 i = 0; i < _allowedDomains.length; i++) {
+            allowedDomains[_allowedDomains[i]] = true;
+        }
+    }
+
+    /// @notice Adds a domain to the list of allowed domains
+    /// @param _domain The domain to allow
+    function allowDomain(uint32 _domain) external onlyOwner {
+        allowedDomains[_domain] = true;
+    }
+
+    /// @notice Removes a domain from the list of allowed domains
+    /// @param _domain The domain to disallow
+    function disallowDomain(uint32 _domain) external onlyOwner {
+        allowedDomains[_domain] = false;
     }
 
     /// @notice Sets the default tip amount required for processing the token transfer
@@ -52,6 +70,8 @@ contract WhiteBridgeMessenger is Ownable, IWhiteBridgeMessenger, RescueContract 
     function sendMessage(uint256 _amount, uint32 _destinationDomain, bytes32 _mintRecipient, address _burnToken)
         external
     {
+        require(allowedDomains[_destinationDomain], "Destination domain not allowed");
+        
         uint256 tipAmount =
             tipAmountsByDomain[_destinationDomain] > 0 ? tipAmountsByDomain[_destinationDomain] : defaultTipAmount;
 
