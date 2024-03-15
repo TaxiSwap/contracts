@@ -22,8 +22,13 @@ contract TaxiSwapMessenger is AccessControl, ITaxiSwapMessenger, RescueContract 
     /// @dev Sets up the TaxiSwapMessenger with necessary addresses and defaults
     /// @param _token The address of the USDC token contract to be used for transfers and tips
     /// @param _tokenMessenger The address of the CCTP contract that handles the cross-domain token transfer
-    constructor(address _token, address _tokenMessenger, address _owner, address _oracle, uint32[] memory _allowedDomains)
-    {
+    constructor(
+        address _token,
+        address _tokenMessenger,
+        address _owner,
+        address _oracle,
+        uint32[] memory _allowedDomains
+    ) {
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
         _grantRole(ORACLE_ROLE, _owner);
         _grantRole(ORACLE_ROLE, _oracle);
@@ -61,6 +66,21 @@ contract TaxiSwapMessenger is AccessControl, ITaxiSwapMessenger, RescueContract 
         tipAmountsByDomain[_domain] = _tipAmount;
     }
 
+    /// @notice Updates tip amounts for multiple domains
+    /// @dev This function can only be called by the oracle.
+    /// @param _domains An array of domain IDs for which the tip amounts are being updated
+    /// @param _tipAmounts An array of new tip amounts for the specified domains
+    function updateTipAmountsForDomains(uint32[] calldata _domains, uint256[] calldata _tipAmounts)
+        external
+        onlyRole(ORACLE_ROLE)
+    {
+        require(_domains.length == _tipAmounts.length, "Mismatched arrays length");
+
+        for (uint256 i = 0; i < _domains.length; i++) {
+            tipAmountsByDomain[_domains[i]] = _tipAmounts[i];
+        }
+    }
+
     function getTipAmount(uint32 _destinationDomain) external view returns (uint256) {
         return tipAmountsByDomain[_destinationDomain] > 0 ? tipAmountsByDomain[_destinationDomain] : defaultTipAmount;
     }
@@ -75,7 +95,7 @@ contract TaxiSwapMessenger is AccessControl, ITaxiSwapMessenger, RescueContract 
         external
     {
         require(allowedDomains[_destinationDomain], "Destination domain not allowed");
-        
+
         uint256 tipAmount =
             tipAmountsByDomain[_destinationDomain] > 0 ? tipAmountsByDomain[_destinationDomain] : defaultTipAmount;
 
