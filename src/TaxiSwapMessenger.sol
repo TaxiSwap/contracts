@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "./interfaces/ITokenMessenger.sol";
 import "./interfaces/ITaxiSwapMessenger.sol";
 import "./RescueContract.sol";
@@ -11,7 +12,7 @@ import "./RescueContract.sol";
 /// @title A bridge messenger contract for transferring tokens with a tip mechanism
 /// @dev This contract allows tokens to be sent across domains with an additional tip fee deducted from the transfer amount.
 /// @notice This contract should be used with a corresponding CCTP token messenger and USDC token
-contract TaxiSwapMessenger is AccessControl, ITaxiSwapMessenger, RescueContract {
+contract TaxiSwapMessenger is AccessControl, Pausable, ITaxiSwapMessenger, RescueContract {
     bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
     IERC20 public token;
     ITokenMessenger public tokenMessenger;
@@ -49,6 +50,14 @@ contract TaxiSwapMessenger is AccessControl, ITaxiSwapMessenger, RescueContract 
     /// @param _domain The domain to disallow
     function disallowDomain(uint32 _domain) external onlyRole(DEFAULT_ADMIN_ROLE) {
         allowedDomains[_domain] = false;
+    }
+
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
     }
 
     /// @notice Sets the default tip amount required for processing the token transfer
@@ -94,6 +103,7 @@ contract TaxiSwapMessenger is AccessControl, ITaxiSwapMessenger, RescueContract 
     function sendMessage(uint256 _amount, uint32 _destinationDomain, bytes32 _mintRecipient, address _burnToken)
         external
     {
+        require(!paused(), "Contract is paused");
         require(allowedDomains[_destinationDomain], "Destination domain not allowed");
 
         uint256 tipAmount =
