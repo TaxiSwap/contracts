@@ -206,6 +206,28 @@ contract TaxiSwapMessengerTest is Test {
         // Since the transaction is expected to revert, there's no need to check post-conditions
     }
 
+    function testCannotSendMessageWhenPaused() public {
+        uint256 amount = 1000e6; 
+        uint32 destinationDomain = 1; 
+        bytes32 mintRecipient = bytes32(uint256(uint160(whaleTokenHolder)));
+        address burnToken = address(token);
+        
+        // Test when paused
+        vm.prank(owner);
+        taxiSwapMessenger.pause();
+
+        vm.prank(whaleTokenHolder);
+        vm.expectRevert("Contract is paused");
+        taxiSwapMessenger.sendMessage(amount, destinationDomain, mintRecipient, burnToken);
+        
+        // Test the same action when unpaused
+        vm.prank(owner);
+        taxiSwapMessenger.unpause();
+
+        vm.prank(whaleTokenHolder);
+        taxiSwapMessenger.sendMessage(amount, destinationDomain, mintRecipient, burnToken);
+    }
+
     function testChangedDefaultTipAmount() public {
         uint256 newTipAmount = 20000; // Example new tip amount
         vm.prank(owner);
