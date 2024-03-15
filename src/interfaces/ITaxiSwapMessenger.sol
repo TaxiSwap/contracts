@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./ITokenMessenger.sol";
 
-interface IWhiteBridgeMessenger {
+interface ITaxiSwapMessenger {
     // Event declaration
     event DepositForBurnCalled(
         uint64 indexed nonce,

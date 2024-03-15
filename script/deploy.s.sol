@@ -4,23 +4,22 @@ pragma solidity ^0.8.19;
 // Importing Forge standard library's Script module
 import "forge-std/Script.sol";
 import "forge-std/console.sol";
-// Importing the WhiteBridgeMessenger contract
-import "../src/WhiteBridgeMessenger.sol";
+import "../src/TaxiSwapMessenger.sol";
 
-/// @title DeployWhiteBridgeMessenger
+/// @title DeployTaxiSwapMessenger
 /// @notice This script is used for deterministically deploying the
-/// WhiteBridgeMessenger contract accross different chains.
+/// TaxiSwapMessenger contract accross different chains.
 /// @dev Run this script with the following command:
-///      forge script script/deploy.s.sol:DeployWhiteBridgeMessenger \
+///      forge script script/deploy.s.sol:DeployTaxiSwapMessenger \
 ///      --rpc-url $RPC_URL --etherscan-api-key $ETHERSCAN_API_KEY \
 ///      --broadcast --verify -vvvv
 /// It requires the RPC_URL,ETHERSCAN_API_KEY, VERIFIER_URL, PRIVATE_KEY, TOKEN_ADDRESS, OWNER and TOKEN_MESSENGER_ADDRESS  to be set as environment variables.
-contract DeployWhiteBridgeMessenger is Script {
+contract DeployTaxiSwapMessenger is Script {
     uint32[] initialAllowedDomains = [0, 1, 2, 3, 6, 7];
     /// @notice Main function that executes the deployment process
     /// @dev This function reads the private key from environment variables,
     ///      as also the token and token messenger addresses
-    ///      initializes broadcasting, and deploys the WhiteBridgeMessenger contract.
+    ///      initializes broadcasting, and deploys the TaxiSwapMessenger contract.
     ///      It also handles the broadcast stoppage after deployment.
 
     function run() public {
@@ -34,8 +33,8 @@ contract DeployWhiteBridgeMessenger is Script {
 
         // Starting the broadcast transaction process with the provided private key
         vm.startBroadcast(privateKey);
-        // Deploying the WhiteBridgeMessenger contract with specified deployment salt
-        new WhiteBridgeMessenger{salt: versionSalt}(token, tokenMessenger, owner, initialAllowedDomains);
+        // Deploying the TaxiSwapMessenger contract with specified deployment salt
+        new TaxiSwapMessenger{salt: versionSalt}(token, tokenMessenger, owner, initialAllowedDomains);
 
         // Stopping the broadcast process
         vm.stopBroadcast();

@@ -62,7 +62,7 @@ $ source .env
 ```
 
 ```shell
-$ forge script script/deploy.s.sol:DeployWhiteBridgeMessenger \
+$ forge script script/deploy.s.sol:DeployTaxiSwapMessenger \
 --rpc-url $RPC_URL --etherscan-api-key $ETHERSCAN_API_KEY \
 --broadcast --verify -vvvv
 ```
