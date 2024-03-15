@@ -93,11 +93,49 @@ contract TaxiSwapMessengerTest is Test {
         taxiSwapMessenger.setTipAmountForDomain(1, domain1TipAmount);
         taxiSwapMessenger.setTipAmountForDomain(2, domain2TipAmount);
         vm.stopPrank();
-        
+
         assertEq(taxiSwapMessenger.getTipAmount(1), domain1TipAmount, "Domain 1 tip amount not set");
         assertEq(taxiSwapMessenger.getTipAmount(2), domain2TipAmount, "Domain 2 tip amount not set");
     }
-    
+
+    function testUpdateMultipleTipAmountsForDomains() public {
+        uint32[] memory domains = new uint32[](2);
+        domains[0] = 1;
+        domains[1] = 2;
+
+        uint256[] memory tipAmounts = new uint256[](2);
+        tipAmounts[0] = 1000;
+        tipAmounts[1] = 2000;
+
+        vm.prank(oracle);
+        taxiSwapMessenger.updateTipAmountsForDomains(domains, tipAmounts);
+
+        assertEq(
+            taxiSwapMessenger.getTipAmount(domains[0]),
+            tipAmounts[0],
+            "Tip amount for domain 1 did not update correctly"
+        );
+        assertEq(
+            taxiSwapMessenger.getTipAmount(domains[1]),
+            tipAmounts[1],
+            "Tip amount for domain 2 did not update correctly"
+        );
+    }
+
+    function testFailNonOracleToUpdateMultipleTipAmountsForDomains() public {
+        address nonOracle = address(0xdeadbeef);
+        uint32[] memory domains = new uint32[](2);
+        domains[0] = 1;
+        domains[1] = 2;
+
+        uint256[] memory tipAmounts = new uint256[](2);
+        tipAmounts[0] = 1000;
+        tipAmounts[1] = 2000;
+
+        vm.prank(nonOracle);
+        taxiSwapMessenger.updateTipAmountsForDomains(domains, tipAmounts);
+    }
+
     function testSendMessageWithVariableTipAmount() public {
         uint256 domain1TipAmount = 5000; // Tip amount for domain 1
         uint256 domain2TipAmount = 15000; // Tip amount for domain 2
