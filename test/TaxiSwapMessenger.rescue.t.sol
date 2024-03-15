@@ -16,6 +16,7 @@ contract TaxiSwapMessengerTest is Test {
     address public tokenMessenger;
     uint256 public initialBalance = 100000e6; // 1000 USDC with 6  decimals
     address public owner = address(0xCAFEBABE);
+    address public oracle = address(0x04AC1E);
     uint32[] initialAllowedDomains = [0, 1, 2, 3, 6, 7];
 
     error OwnableUnauthorizedAccount(address account);
@@ -27,7 +28,7 @@ contract TaxiSwapMessengerTest is Test {
         tokenMessenger = address(bytes20(vm.envBytes("TOKEN_MESSENGER_ADDRESS")));
         whaleTokenHolder = vm.envAddress("WHALE_TOKEN_HOLDER");
 
-        taxiSwapMessenger = new TaxiSwapMessenger(address(token), tokenMessenger, owner, initialAllowedDomains);
+        taxiSwapMessenger = new TaxiSwapMessenger(address(token), tokenMessenger, owner, oracle, initialAllowedDomains);
 
         vm.prank(whaleTokenHolder);
         token.approve(address(taxiSwapMessenger), initialBalance);
@@ -68,8 +69,8 @@ contract TaxiSwapMessengerTest is Test {
         assertEq(address(taxiSwapMessenger).balance, depositAmount, "Contract did not receive ETH");
 
         // Act: Withdraw ETH by the owner
-        bytes4 selector = bytes4(keccak256("OwnableUnauthorizedAccount(address)"));
-        vm.expectRevert(abi.encodeWithSelector(selector, address(thief)));
+        bytes4 selector = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, address(thief), taxiSwapMessenger.DEFAULT_ADMIN_ROLE()));
         vm.prank(thief);
         taxiSwapMessenger.withdrawETH(payable(thief), depositAmount);
 
@@ -117,8 +118,8 @@ contract TaxiSwapMessengerTest is Test {
         assertEq(token.balanceOf(address(taxiSwapMessenger)), depositAmount, "Contract did not receive tokens");
 
         // Act & Assert: Attempt to withdraw tokens by a non-owner should revert
-        bytes4 selector = bytes4(keccak256("OwnableUnauthorizedAccount(address)"));
-        vm.expectRevert(abi.encodeWithSelector(selector, nonOwner));
+        bytes4 selector = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner), taxiSwapMessenger.DEFAULT_ADMIN_ROLE()));
         vm.prank(nonOwner);
         taxiSwapMessenger.withdrawTokens(address(token), nonOwner, depositAmount);
 
@@ -164,8 +165,8 @@ contract TaxiSwapMessengerTest is Test {
         bytes memory data = abi.encodeWithSignature("approve(address,uint256)", spender, approveAmount);
 
         // Expect the transaction to revert for non-owner
-        bytes4 selector = bytes4(keccak256("OwnableUnauthorizedAccount(address)"));
-        vm.expectRevert(abi.encodeWithSelector(selector, nonOwner));
+        bytes4 selector = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner), taxiSwapMessenger.DEFAULT_ADMIN_ROLE()));
 
         // Attempt to execute the approval from a non-owner
         vm.prank(nonOwner);

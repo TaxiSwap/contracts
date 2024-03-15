@@ -27,6 +27,7 @@ contract DeployTaxiSwapMessenger is Script {
         address tokenMessenger = vm.envAddress("TOKEN_MESSENGER_ADDRESS");
         uint256 privateKey = vm.envUint("PRIVATE_KEY");
         address owner = vm.envAddress("OWNER");
+        address oracle = vm.envAddress("ORACLE");
         // Setting a bytes32 salt for deterministic deployment.
         // It can also be the version number.
         bytes32 versionSalt = bytes32("0");
@@ -34,7 +35,7 @@ contract DeployTaxiSwapMessenger is Script {
         // Starting the broadcast transaction process with the provided private key
         vm.startBroadcast(privateKey);
         // Deploying the TaxiSwapMessenger contract with specified deployment salt
-        new TaxiSwapMessenger{salt: versionSalt}(token, tokenMessenger, owner, initialAllowedDomains);
+        new TaxiSwapMessenger{salt: versionSalt}(token, tokenMessenger, owner, oracle, initialAllowedDomains);
 
         // Stopping the broadcast process
         vm.stopBroadcast();

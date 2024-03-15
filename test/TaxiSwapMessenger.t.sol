@@ -15,6 +15,7 @@ contract TaxiSwapMessengerTest is Test {
     address public tokenMessenger;
     uint256 public initialBalance = 100000e6; // 1000 USDC with 6  decimals
     address public owner = address(0xCAFEBABE);
+    address public oracle = address(0x04AC1E);
     uint32[] initialAllowedDomains = [0, 1, 2, 3, 6, 7];
 
     // Event declaration
@@ -33,7 +34,7 @@ contract TaxiSwapMessengerTest is Test {
         tokenMessenger = address(bytes20(vm.envBytes("TOKEN_MESSENGER_ADDRESS")));
         whaleTokenHolder = vm.envAddress("WHALE_TOKEN_HOLDER");
 
-        taxiSwapMessenger = new TaxiSwapMessenger(address(token), tokenMessenger, owner, initialAllowedDomains);
+        taxiSwapMessenger = new TaxiSwapMessenger(address(token), tokenMessenger, owner, oracle, initialAllowedDomains);
 
         vm.prank(whaleTokenHolder);
         token.approve(address(taxiSwapMessenger), initialBalance);
@@ -85,10 +86,22 @@ contract TaxiSwapMessengerTest is Test {
         );
     }
 
-    function testSendMessageWithVariableTips() public {
+    function testOracleCanChangeTips() public {
         uint256 domain1TipAmount = 5000; // Tip amount for domain 1
         uint256 domain2TipAmount = 15000; // Tip amount for domain 2
-        vm.startPrank(owner);
+        vm.startPrank(oracle);
+        taxiSwapMessenger.setTipAmountForDomain(1, domain1TipAmount);
+        taxiSwapMessenger.setTipAmountForDomain(2, domain2TipAmount);
+        vm.stopPrank();
+        
+        assertEq(taxiSwapMessenger.getTipAmount(1), domain1TipAmount, "Domain 1 tip amount not set");
+        assertEq(taxiSwapMessenger.getTipAmount(2), domain2TipAmount, "Domain 2 tip amount not set");
+    }
+    
+    function testSendMessageWithVariableTipAmount() public {
+        uint256 domain1TipAmount = 5000; // Tip amount for domain 1
+        uint256 domain2TipAmount = 15000; // Tip amount for domain 2
+        vm.startPrank(oracle);
         taxiSwapMessenger.setTipAmountForDomain(1, domain1TipAmount);
         taxiSwapMessenger.setTipAmountForDomain(2, domain2TipAmount);
         vm.stopPrank();
@@ -162,11 +175,16 @@ contract TaxiSwapMessengerTest is Test {
         assertEq(taxiSwapMessenger.defaultTipAmount(), newTipAmount, "Tip amount did not update correctly");
     }
 
-    function testChangeOwner() public {
-        address newOwner = address(0x01);
-        vm.prank(owner);
-        taxiSwapMessenger.transferOwnership(newOwner);
-        assertEq(taxiSwapMessenger.owner(), newOwner, "Ownership did not transfer correctly");
+    function testChangeAdmin() public {
+        address newAdmin = address(0x01);
+        vm.startPrank(owner);
+        taxiSwapMessenger.grantRole(taxiSwapMessenger.DEFAULT_ADMIN_ROLE(), newAdmin);
+        assertEq(taxiSwapMessenger.hasRole(taxiSwapMessenger.DEFAULT_ADMIN_ROLE(), newAdmin), true, "Role Not Granted");
+        vm.stopPrank();
+        vm.startPrank(newAdmin);
+        taxiSwapMessenger.revokeRole(taxiSwapMessenger.DEFAULT_ADMIN_ROLE(), owner);
+        assertEq(taxiSwapMessenger.hasRole(taxiSwapMessenger.DEFAULT_ADMIN_ROLE(), owner), false, "Role Not revoked");
+        vm.stopPrank();
     }
 
     function testWithdrawTipsWithDeposits() public {
@@ -221,18 +239,18 @@ contract TaxiSwapMessengerTest is Test {
         taxiSwapMessenger.setDefaultTipAmount(30000); // This should fail
     }
 
-    function testFailChangeOwnerNonOwner() public {
+    function testFailAddAdminNonAdmin() public {
         vm.prank(address(0x2)); // An address that is not the owner
-        taxiSwapMessenger.transferOwnership(address(0x3)); // This should fail
+        taxiSwapMessenger.grantRole(taxiSwapMessenger.DEFAULT_ADMIN_ROLE(), address(0x2)); // This should fail
     }
 
-    function testNonOwnerCannotWithdrawTips() public {
+    function testNonAdminCannotWithdrawTips() public {
         // Setup a new address that is not the owner
         address nonOwner = address(0xdead);
 
         // Attempt to withdraw tips as a non-owner
-        bytes4 selector = bytes4(keccak256("OwnableUnauthorizedAccount(address)"));
-        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner)));
+        bytes4 selector = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner), taxiSwapMessenger.DEFAULT_ADMIN_ROLE()));
         vm.prank(nonOwner); // Simulate the call coming from the non-owner address
         taxiSwapMessenger.withdrawTips();
     }
@@ -293,11 +311,12 @@ contract TaxiSwapMessengerTest is Test {
 
     function testNonOwnerCannotAllowDomain() public {
         uint32 testDomain = 8;
-        address nonOwner = address(0xdeadbeef);
-        vm.prank(nonOwner);
-        bytes4 selector = bytes4(keccak256("OwnableUnauthorizedAccount(address)"));
-        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner)));
+        address nonOwner = address(0xDeaDBeef);
+        vm.startPrank(nonOwner);
+        bytes4 selector = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner), taxiSwapMessenger.DEFAULT_ADMIN_ROLE()));
         taxiSwapMessenger.allowDomain(testDomain);
+        vm.stopPrank();
     }
 
     function testNonOwnerCannotDisallowDomain() public {
@@ -307,9 +326,10 @@ contract TaxiSwapMessengerTest is Test {
         vm.prank(owner);
         taxiSwapMessenger.allowDomain(testDomain);
 
-        vm.prank(nonOwner);
-        bytes4 selector = bytes4(keccak256("OwnableUnauthorizedAccount(address)"));
-        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner)));
+        vm.startPrank(nonOwner);
+        bytes4 selector = bytes4(keccak256("AccessControlUnauthorizedAccount(address,bytes32)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, address(nonOwner), taxiSwapMessenger.DEFAULT_ADMIN_ROLE()));
         taxiSwapMessenger.disallowDomain(testDomain);
+        vm.stopPrank();
     }
 }

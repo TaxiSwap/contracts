@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/ITokenMessenger.sol";
 import "./interfaces/ITaxiSwapMessenger.sol";
 import "./RescueContract.sol";
@@ -10,7 +11,8 @@ import "./RescueContract.sol";
 /// @title A bridge messenger contract for transferring tokens with a tip mechanism
 /// @dev This contract allows tokens to be sent across domains with an additional tip fee deducted from the transfer amount.
 /// @notice This contract should be used with a corresponding CCTP token messenger and USDC token
-contract TaxiSwapMessenger is Ownable, ITaxiSwapMessenger, RescueContract {
+contract TaxiSwapMessenger is AccessControl, ITaxiSwapMessenger, RescueContract {
+    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
     IERC20 public token;
     ITokenMessenger public tokenMessenger;
     mapping(uint32 => uint256) private tipAmountsByDomain;
@@ -20,9 +22,11 @@ contract TaxiSwapMessenger is Ownable, ITaxiSwapMessenger, RescueContract {
     /// @dev Sets up the TaxiSwapMessenger with necessary addresses and defaults
     /// @param _token The address of the USDC token contract to be used for transfers and tips
     /// @param _tokenMessenger The address of the CCTP contract that handles the cross-domain token transfer
-    constructor(address _token, address _tokenMessenger, address _owner, uint32[] memory _allowedDomains)
-        Ownable(_owner)
+    constructor(address _token, address _tokenMessenger, address _owner, address _oracle, uint32[] memory _allowedDomains)
     {
+        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(ORACLE_ROLE, _owner);
+        _grantRole(ORACLE_ROLE, _oracle);
         token = IERC20(_token);
         tokenMessenger = ITokenMessenger(_tokenMessenger);
         for (uint256 i = 0; i < _allowedDomains.length; i++) {
@@ -32,20 +36,20 @@ contract TaxiSwapMessenger is Ownable, ITaxiSwapMessenger, RescueContract {
 
     /// @notice Adds a domain to the list of allowed domains
     /// @param _domain The domain to allow
-    function allowDomain(uint32 _domain) external onlyOwner {
+    function allowDomain(uint32 _domain) external onlyRole(DEFAULT_ADMIN_ROLE) {
         allowedDomains[_domain] = true;
     }
 
     /// @notice Removes a domain from the list of allowed domains
     /// @param _domain The domain to disallow
-    function disallowDomain(uint32 _domain) external onlyOwner {
+    function disallowDomain(uint32 _domain) external onlyRole(DEFAULT_ADMIN_ROLE) {
         allowedDomains[_domain] = false;
     }
 
     /// @notice Sets the default tip amount required for processing the token transfer
     /// @dev This function can only be called by the owner of the contract.
     /// @param _defaultTipAmount The new tip amount in tokens
-    function setDefaultTipAmount(uint256 _defaultTipAmount) external onlyOwner {
+    function setDefaultTipAmount(uint256 _defaultTipAmount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         defaultTipAmount = _defaultTipAmount;
     }
 
@@ -53,7 +57,7 @@ contract TaxiSwapMessenger is Ownable, ITaxiSwapMessenger, RescueContract {
     /// @dev This function can only be called by the owner of the contract.
     /// @param _domain The domain for which the tip amount is being set
     /// @param _tipAmount The new tip amount in tokens for the specified domain
-    function setTipAmountForDomain(uint32 _domain, uint256 _tipAmount) external onlyOwner {
+    function setTipAmountForDomain(uint32 _domain, uint256 _tipAmount) external onlyRole(ORACLE_ROLE) {
         tipAmountsByDomain[_domain] = _tipAmount;
     }
 
@@ -98,16 +102,16 @@ contract TaxiSwapMessenger is Ownable, ITaxiSwapMessenger, RescueContract {
 
     /// @notice Allows the owner to withdraw accumulated tip amounts
     /// @dev Withdraws all the tokens held by the contract to the owner's address.
-    function withdrawTips() external onlyOwner {
+    function withdrawTips() external onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 balance = token.balanceOf(address(this));
-        require(token.transfer(owner(), balance), "Withdrawal failed");
+        require(token.transfer(msg.sender, balance), "Withdrawal failed");
     }
 
     /// @notice Withdraws ETH from the contract to a specified address.
     /// @dev Calls the internal _withdrawETH function from RescueContract with onlyOwner modifier for access control.
     /// @param _to The address to which the ETH will be sent.
     /// @param _amount The amount of ETH to withdraw in wei.
-    function withdrawETH(address payable _to, uint256 _amount) public onlyOwner {
+    function withdrawETH(address payable _to, uint256 _amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
         _withdrawETH(_to, _amount);
     }
 
@@ -116,7 +120,7 @@ contract TaxiSwapMessenger is Ownable, ITaxiSwapMessenger, RescueContract {
     /// @param _tokenAddress The address of the ERC-20 token contract.
     /// @param _to The address to which the tokens will be sent.
     /// @param _amount The amount of tokens to withdraw.
-    function withdrawTokens(address _tokenAddress, address _to, uint256 _amount) public onlyOwner {
+    function withdrawTokens(address _tokenAddress, address _to, uint256 _amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
         _withdrawTokens(_tokenAddress, _to, _amount);
     }
 
@@ -129,7 +133,7 @@ contract TaxiSwapMessenger is Ownable, ITaxiSwapMessenger, RescueContract {
     /// @return result The return data from the call.
     function executeCall(address _to, uint256 _value, bytes calldata _data)
         public
-        onlyOwner
+        onlyRole(DEFAULT_ADMIN_ROLE)
         returns (bool, bytes memory)
     {
         return _executeCall(_to, _value, _data);
