@@ -207,11 +207,11 @@ contract TaxiSwapMessengerTest is Test {
     }
 
     function testCannotSendMessageWhenPaused() public {
-        uint256 amount = 1000e6; 
-        uint32 destinationDomain = 1; 
+        uint256 amount = 1000e6;
+        uint32 destinationDomain = 1;
         bytes32 mintRecipient = bytes32(uint256(uint160(whaleTokenHolder)));
         address burnToken = address(token);
-        
+
         // Test when paused
         vm.prank(owner);
         taxiSwapMessenger.pause();
@@ -219,7 +219,7 @@ contract TaxiSwapMessengerTest is Test {
         vm.prank(whaleTokenHolder);
         vm.expectRevert("Contract is paused");
         taxiSwapMessenger.sendMessage(amount, destinationDomain, mintRecipient, burnToken);
-        
+
         // Test the same action when unpaused
         vm.prank(owner);
         taxiSwapMessenger.unpause();
