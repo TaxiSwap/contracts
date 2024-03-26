@@ -17,7 +17,7 @@ contract TaxiSwapMessenger is AccessControl, Pausable, ITaxiSwapMessenger, Rescu
     IERC20 public token;
     ITokenMessenger public tokenMessenger;
     mapping(uint32 => uint256) private tipAmountsByDomain;
-    uint256 public defaultTipAmount = 10_000; // Default tip amount
+    uint256 public defaultTipAmount = 950_000; // Default tip amount
     mapping(uint32 => bool) public allowedDomains;
 
     /// @dev Sets up the TaxiSwapMessenger with necessary addresses and defaults
