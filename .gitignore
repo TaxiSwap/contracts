@@ -12,3 +12,9 @@ docs/
 
 # Dotenv file
 .env
+.env.*
+!.env.example
+
+# Deployment logs
+/.deployment_logs
+deployment_log_*
