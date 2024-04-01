@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.20;
 
 import "forge-std/Test.sol";
 import "../src/TaxiSwapMessenger.sol";
@@ -25,6 +25,17 @@ contract TaxiSwapMessengerTest is Test {
         uint32 indexed destinationDomain,
         bytes32 indexed mintRecipient,
         address burnToken
+    );
+
+    event DepositForBurn(
+        uint64 indexed nonce,
+        address indexed burnToken,
+        uint256 amount,
+        address indexed depositor,
+        bytes32 mintRecipient,
+        uint32 destinationDomain,
+        bytes32 destinationTokenMessenger,
+        bytes32 destinationCaller
     );
 
     function setUp() public {

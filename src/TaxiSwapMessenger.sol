@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -19,6 +19,8 @@ contract TaxiSwapMessenger is AccessControl, Pausable, ITaxiSwapMessenger, Rescu
     mapping(uint32 => uint256) private tipAmountsByDomain;
     uint256 public defaultTipAmount = 950_000; // Default tip amount
     mapping(uint32 => bool) public allowedDomains;
+
+
 
     /// @dev Sets up the TaxiSwapMessenger with necessary addresses and defaults
     /// @param _token The address of the USDC token contract to be used for transfers and tips
