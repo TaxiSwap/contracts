@@ -15,7 +15,7 @@ import "../src/TaxiSwapMessenger.sol";
 ///      --broadcast --verify -vvvv
 /// It requires the RPC_URL,ETHERSCAN_API_KEY, VERIFIER_URL, PRIVATE_KEY, TOKEN_ADDRESS, OWNER and TOKEN_MESSENGER_ADDRESS  to be set as environment variables.
 contract DeployTaxiSwapMessenger is Script {
-    uint32[] initialAllowedDomains = [ 1, 2, 3, 6, 7];
+    uint32[] initialAllowedDomains = [1, 2, 3, 6, 7];
     /// @notice Main function that executes the deployment process
     /// @dev This function reads the private key from environment variables,
     ///      as also the token and token messenger addresses
