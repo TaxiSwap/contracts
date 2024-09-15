@@ -4,3 +4,6 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
+[submodule "lib/axelar-cgp-solidity"]
+	path = lib/axelar-cgp-solidity
+	url = https://github.com/axelarnetwork/axelar-cgp-solidity
